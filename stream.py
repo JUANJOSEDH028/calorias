@@ -14,14 +14,14 @@ data = pd.read_excel(file_path)
 def autenticar_google_drive():
     # Leer los secrets desde Streamlit
     client_secrets_content = {
-        "installed": {
-            "client_id": st.secrets["client_secrets.installed.client_id"],
-            "project_id": st.secrets["client_secrets.installed.project_id"],
-            "auth_uri": st.secrets["client_secrets.installed.auth_uri"],
-            "token_uri": st.secrets["client_secrets.installed.token_uri"],
-            "auth_provider_x509_cert_url": st.secrets["client_secrets.installed.auth_provider_x509_cert_url"],
-            "client_secret": st.secrets["client_secrets.installed.client_secret"],
-            "redirect_uris": st.secrets["client_secrets.installed.redirect_uris"]
+        "web": {
+            "client_id": st.secrets["client_secrets.web.client_id"],
+            "project_id": st.secrets["client_secrets.web.project_id"],
+            "auth_uri": st.secrets["client_secrets.web.auth_uri"],
+            "token_uri": st.secrets["client_secrets.web.token_uri"],
+            "auth_provider_x509_cert_url": st.secrets["client_secrets.web.auth_provider_x509_cert_url"],
+            "client_secret": st.secrets["client_secrets.web.client_secret"],
+            "redirect_uris": st.secrets["client_secrets.web.redirect_uris"]
         }
     }
 
