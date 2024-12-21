@@ -6,8 +6,8 @@ from pydrive.drive import GoogleDrive
 import streamlit as st
 
 # Ruta del archivo de datos
-file_path = r"C:\Users\practicantev\juan\alimentos\alimentos_limpios.xlsx"
-data = pd.read_excel(file_path)
+#file_path = r"C:\Users\practicantev\juan\alimentos\alimentos_limpios.xlsx"
+data = pd.read_excel("alimentos_limpios.csv")
 
 # Ruta del historial
 historial_path = "historial_consumo.csv"
