@@ -6,9 +6,13 @@ from pydrive.drive import GoogleDrive
 from datetime import datetime
 import os
 
+# Ruta del archivo de alimentos (incluido en el proyecto)
+file_path = "alimentos_limpios.xlsx"
+data = pd.read_excel(file_path)
+
 # Autenticación con Google Drive
 def autenticar_google_drive():
-    # Leer los secrets desde Streamlit
+    # Leer los secrets desde Streamlit Cloud
     client_secrets_content = {
         "installed": {
             "client_id": st.secrets["client_secrets.installed.client_id"],
@@ -49,17 +53,6 @@ def subir_a_google_drive():
 # Configuración inicial
 st.sidebar.title("Menú")
 opcion = st.sidebar.radio("Selecciona una opción:", ["Configurar Objetivos", "Registrar Alimentos", "Resumen Diario", "Subir a Google Drive"])
-
-# Variables para manejar datos cargados
-uploaded_file = st.sidebar.file_uploader("Sube el archivo de alimentos", type=["xlsx"])
-data = None
-
-# Verificar si el archivo ha sido cargado
-if uploaded_file:
-    data = pd.read_excel(uploaded_file)
-else:
-    st.warning("Por favor, sube el archivo 'alimentos_limpios.xlsx' para continuar.")
-    st.stop()
 
 # Configurar objetivos
 def configurar_objetivos():
