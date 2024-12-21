@@ -129,3 +129,22 @@ elif opcion == "Resumen Diario":
     mostrar_resumen()
 elif opcion == "Cerrar Día":
     cerrar_dia()
+from pydrive.auth import GoogleAuth
+from pydrive.drive import GoogleDrive
+
+def subir_a_google_drive():
+    # Autenticación
+    gauth = GoogleAuth()
+    gauth.LocalWebserverAuth()  # Abre el navegador para autenticar
+    drive = GoogleDrive(gauth)
+    
+    # Verifica si el archivo existe
+    archivo = 'historial_consumo.csv'
+    if os.path.exists(archivo):
+        # Crear archivo en Google Drive
+        file_drive = drive.CreateFile({'title': archivo})  # Nombre en Drive
+        file_drive.SetContentFile(archivo)  # Archivo local
+        file_drive.Upload()
+        st.success(f"Archivo '{archivo}' subido a Google Drive con éxito.")
+    else:
+        st.error("No se encontró el archivo para subir.")
