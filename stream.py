@@ -6,13 +6,13 @@ from pydrive.drive import GoogleDrive
 from datetime import datetime
 import os
 
-# Ruta del archivo de alimentos (incluido en el proyecto)
+# Ruta del archivo de alimentos (asegúrate de que está en el mismo directorio que este script)
 file_path = "alimentos_limpios.xlsx"
 data = pd.read_excel(file_path)
 
 # Autenticación con Google Drive
 def autenticar_google_drive():
-    # Leer los secrets desde Streamlit Cloud
+    # Leer los secrets desde Streamlit
     client_secrets_content = {
         "installed": {
             "client_id": st.secrets["client_secrets.installed.client_id"],
