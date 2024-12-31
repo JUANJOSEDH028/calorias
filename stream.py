@@ -1,69 +1,66 @@
 import streamlit as st
 import pandas as pd
+import json
+from pydrive.auth import GoogleAuth
+from pydrive.drive import GoogleDrive
 from datetime import datetime
 import os
 
-# Ruta del archivo de alimentos
+# Ruta del archivo de alimentos (asegúrate de que está en el mismo directorio que este script)
 file_path = "alimentos_limpios.xlsx"
 data = pd.read_excel(file_path)
 
-# Inicialización de variables en session_state
-if "objetivo_proteinas" not in st.session_state:
-    st.session_state.objetivo_proteinas = 0
-if "limite_calorias" not in st.session_state:
-    st.session_state.limite_calorias = 0
-
-# Función para configurar objetivos
-def configurar_objetivos():
-    st.header("Configuración de Objetivos")
-    peso = st.number_input("Peso actual (kg):", min_value=1.0, step=0.1)
-    altura = st.number_input("Altura (cm):", min_value=1.0, step=0.1)
-    edad = st.number_input("Edad (años):", min_value=1, step=1)
-    peso_deseado = st.number_input("Peso deseado (kg):", min_value=1.0, step=0.1)
-
-    if st.button("Calcular Objetivos"):
-        st.session_state.objetivo_proteinas = peso * 1.8
-        if peso_deseado > peso:
-            st.session_state.limite_calorias = peso_deseado * 22 * 1.5 + 500
-            st.success(f"Meta diaria de calorías: {st.session_state.limite_calorias:.2f} calorías.")
-        elif peso_deseado < peso:
-            st.session_state.limite_calorias = 10 * peso + 6.25 * altura - 5 * edad + 5 - 500
-            st.success(f"Límite diario de calorías: {st.session_state.limite_calorias:.2f} calorías.")
-        else:
-            st.session_state.limite_calorias = 10 * peso + 6.25 * altura - 5 * edad + 5
-            st.success(f"Requerimiento calórico diario: {st.session_state.limite_calorias:.2f} calorías.")
-
-        st.success(f"Objetivo diario de proteínas: {st.session_state.objetivo_proteinas:.2f} g.")
-
-# Función para mostrar el resumen diario con alertas
-def mostrar_resumen():
-    st.header("Resumen Diario")
-    if os.path.exists("historial_consumo.csv"):
-        historial = pd.read_csv("historial_consumo.csv")
-        resumen = historial[["Calorías", "Grasas (g)", "Proteínas (g)", "Carbohidratos (g)"]].sum()
-        st.table(resumen)
-
-        # Mostrar alertas sobre objetivos
-        st.subheader("Alertas de Objetivos")
-        if resumen["Calorías"] >= st.session_state.limite_calorias:
-            st.warning("¡Has alcanzado o superado tu límite diario de calorías!")
-        else:
-            st.info(f"Te quedan {st.session_state.limite_calorias - resumen['Calorías']:.2f} calorías antes de alcanzar tu límite.")
-
-        if resumen["Proteínas (g)"] >= st.session_state.objetivo_proteinas:
-            st.success("¡Has alcanzado tu objetivo diario de proteínas!")
-        else:
-            st.info(f"Te faltan {st.session_state.objetivo_proteinas - resumen['Proteínas (g)']:.2f} g de proteínas para alcanzar tu objetivo.")
+# Autenticación con Google Drive
+def autenticar_google_drive(usuario):
+    credenciales_usuario = f"mycreds_{usuario}.txt"
+    if not os.path.exists(credenciales_usuario):
+        gauth = GoogleAuth()
+        gauth.LocalWebserverAuth()
+        gauth.SaveCredentialsFile(credenciales_usuario)
     else:
-        st.info("No hay registros en el historial.")
+        gauth = GoogleAuth()
+        gauth.LoadCredentialsFile(credenciales_usuario)
 
-# Configuración inicial
-st.sidebar.title("Menú")
-opcion = st.sidebar.radio("Selecciona una opción:", ["Configurar Objetivos", "Registrar Alimentos", "Resumen Diario", "Cerrar Día"])
+    return GoogleDrive(gauth)
 
-if opcion == "Configurar Objetivos":
-    configurar_objetivos()
-elif opcion == "Registrar Alimentos":
+# Subir archivo de un usuario específico
+def subir_a_google_drive_usuario(usuario):
+    archivo = f"historial_consumo_{usuario}.csv"
+    drive = autenticar_google_drive(usuario)
+
+    if os.path.exists(archivo):
+        file_drive = drive.CreateFile({'title': archivo})
+        file_drive.SetContentFile(archivo)
+        file_drive.Upload()
+        st.success(f"Archivo '{archivo}' subido a Google Drive con éxito.")
+    else:
+        st.error("No se encontró el archivo para subir.")
+
+# Descargar archivo de un usuario específico
+def descargar_desde_google_drive_usuario(usuario):
+    archivo = f"historial_consumo_{usuario}.csv"
+    drive = autenticar_google_drive(usuario)
+    file_list = drive.ListFile({'q': f"title='{archivo}'"}).GetList()
+
+    if file_list:
+        file_drive = file_list[0]
+        file_drive.GetContentFile(archivo)
+        st.success(f"Archivo '{archivo}' descargado desde Google Drive.")
+    else:
+        st.warning(f"No se encontró un archivo en Google Drive con el nombre '{archivo}'.")
+
+# Función para manejar el inicio de sesión y archivos
+def gestionar_usuario():
+    st.sidebar.header("Inicio de Sesión")
+    usuario = st.sidebar.text_input("Introduce tu correo electrónico:")
+    if st.sidebar.button("Iniciar Sesión"):
+        descargar_desde_google_drive_usuario(usuario)
+        st.session_state["usuario"] = usuario
+        st.sidebar.success(f"Sesión iniciada para {usuario}.")
+    return st.session_state.get("usuario")
+
+# Registrar alimentos para un usuario específico
+def registrar_alimentos(usuario):
     st.header("Registro de Alimentos Consumidos")
     alimento_nombre = st.selectbox("Selecciona un alimento:", data["name"])
     alimento = data[data["name"] == alimento_nombre].iloc[0]
@@ -82,39 +79,68 @@ elif opcion == "Registrar Alimentos":
             'Carbohidratos (g)': [valores["Carbohydrate (g)"]],
         })
 
-        if os.path.exists("historial_consumo.csv"):
-            historial = pd.read_csv("historial_consumo.csv")
+        archivo = f"historial_consumo_{usuario}.csv"
+        if os.path.exists(archivo):
+            historial = pd.read_csv(archivo)
             historial = pd.concat([historial, registro], ignore_index=True)
         else:
             historial = registro
 
-        historial.to_csv("historial_consumo.csv", index=False)
+        historial.to_csv(archivo, index=False)
         st.success("Registro guardado con éxito.")
-elif opcion == "Resumen Diario":
-    mostrar_resumen()
-elif opcion == "Cerrar Día":
+
+# Mostrar resumen diario para un usuario específico
+def mostrar_resumen(usuario):
+    st.header("Resumen Diario")
+    archivo = f"historial_consumo_{usuario}.csv"
+    if os.path.exists(archivo):
+        historial = pd.read_csv(archivo)
+        resumen = historial[["Calorías", "Grasas (g)", "Proteínas (g)", "Carbohidratos (g)"]].sum()
+        st.table(resumen)
+    else:
+        st.info("No hay registros en el historial.")
+
+# Cerrar día para un usuario específico
+def cerrar_dia(usuario):
     st.header("Cierre del Día")
-    if os.path.exists("historial_consumo.csv"):
-        historial = pd.read_csv("historial_consumo.csv")
+    archivo = f"historial_consumo_{usuario}.csv"
+    if os.path.exists(archivo):
+        historial = pd.read_csv(archivo)
         resumen = historial[["Calorías", "Grasas (g)", "Proteínas (g)", "Carbohidratos (g)"]].sum()
         st.subheader("Resumen del Día")
         st.table(resumen)
 
-        # Guardar historial general
         fecha_cierre = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         historial["Fecha de Cierre"] = fecha_cierre
-        if os.path.exists("historial_general.csv"):
-            historial_general = pd.read_csv("historial_general.csv")
+
+        archivo_general = f"historial_general_{usuario}.csv"
+        if os.path.exists(archivo_general):
+            historial_general = pd.read_csv(archivo_general)
             historial_general = pd.concat([historial_general, historial], ignore_index=True)
         else:
             historial_general = historial
-        historial_general.to_csv("historial_general.csv", index=False)
 
-        # Limpiar el historial diario
-        os.remove("historial_consumo.csv")
-        st.success("Día cerrado con éxito.")
+        historial_general.to_csv(archivo_general, index=False)
+        os.remove(archivo)
+        st.success("Día cerrado con éxito. Los datos se guardaron en el historial general.")
     else:
         st.info("No hay registros en el historial diario para cerrar el día.")
+
+# Inicializar sesión de usuario
+usuario_actual = gestionar_usuario()
+
+if usuario_actual:
+    opcion = st.sidebar.radio("Selecciona una opción:", ["Registrar Alimentos", "Resumen Diario", "Subir a Google Drive", "Cerrar Día"])
+
+    if opcion == "Registrar Alimentos":
+        registrar_alimentos(usuario_actual)
+    elif opcion == "Resumen Diario":
+        mostrar_resumen(usuario_actual)
+    elif opcion == "Subir a Google Drive":
+        subir_a_google_drive_usuario(usuario_actual)
+    elif opcion == "Cerrar Día":
+        cerrar_dia(usuario_actual)
+
 
 
 
