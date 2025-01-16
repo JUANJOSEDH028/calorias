@@ -6,7 +6,7 @@ from datetime import datetime
 import os
 
 # Ruta del archivo de alimentos
-file_path = r"C:\Users\practicantev\juan\alimentos\alimentos_limpios.xlsx"
+file_path = r"https://github.com/JUANJOSEDH028/calorias/blob/main/alimentos_limpios.xlsx"
 data = pd.read_excel(file_path)
 
 # Autenticación con Google Drive
