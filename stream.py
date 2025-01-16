@@ -1,24 +1,42 @@
 import streamlit as st
 import pandas as pd
-import json
-from pydrive.auth import GoogleAuth
-from pydrive.drive import GoogleDrive
+from pydrive2.auth import GoogleAuth
+from pydrive2.drive import GoogleDrive
 from datetime import datetime
 import os
+import json
+import tempfile
 
-# Ruta del archivo de alimentos (asegúrate de que está en el mismo directorio que este script)
+# Ruta del archivo de alimentos
 file_path = "alimentos_limpios.xlsx"
 data = pd.read_excel(file_path)
 
-# Autenticación con Google Drive
+# Autenticación con Google Drive usando PyDrive2
 def autenticar_google_drive(usuario):
     credenciales_usuario = f"mycreds_{usuario}.txt"
+
+    # Crear un archivo temporal de client_secrets.json desde st.secrets
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as temp_file:
+        temp_file.write(json.dumps({
+            "web": {
+                "client_id": st.secrets["client_secrets"]["web"]["client_id"],
+                "client_secret": st.secrets["client_secrets"]["web"]["client_secret"],
+                "auth_uri": st.secrets["client_secrets"]["web"]["auth_uri"],
+                "token_uri": st.secrets["client_secrets"]["web"]["token_uri"],
+                "auth_provider_x509_cert_url": st.secrets["client_secrets"]["web"]["auth_provider_x509_cert_url"],
+                "redirect_uris": st.secrets["client_secrets"]["web"]["redirect_uris"]
+            }
+        }).encode("utf-8"))
+        client_secrets_path = temp_file.name
+
+    # Autenticación con Google Drive
+    gauth = GoogleAuth()
+    gauth.LoadClientConfigFile(client_secrets_path)
+
     if not os.path.exists(credenciales_usuario):
-        gauth = GoogleAuth()
-        gauth.LocalWebserverAuth()
+        gauth.LocalWebserverAuth()  # Abre el navegador para autenticación
         gauth.SaveCredentialsFile(credenciales_usuario)
     else:
-        gauth = GoogleAuth()
         gauth.LoadCredentialsFile(credenciales_usuario)
 
     return GoogleDrive(gauth)
@@ -100,32 +118,6 @@ def mostrar_resumen(usuario):
     else:
         st.info("No hay registros en el historial.")
 
-# Cerrar día para un usuario específico
-def cerrar_dia(usuario):
-    st.header("Cierre del Día")
-    archivo = f"historial_consumo_{usuario}.csv"
-    if os.path.exists(archivo):
-        historial = pd.read_csv(archivo)
-        resumen = historial[["Calorías", "Grasas (g)", "Proteínas (g)", "Carbohidratos (g)"]].sum()
-        st.subheader("Resumen del Día")
-        st.table(resumen)
-
-        fecha_cierre = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        historial["Fecha de Cierre"] = fecha_cierre
-
-        archivo_general = f"historial_general_{usuario}.csv"
-        if os.path.exists(archivo_general):
-            historial_general = pd.read_csv(archivo_general)
-            historial_general = pd.concat([historial_general, historial], ignore_index=True)
-        else:
-            historial_general = historial
-
-        historial_general.to_csv(archivo_general, index=False)
-        os.remove(archivo)
-        st.success("Día cerrado con éxito. Los datos se guardaron en el historial general.")
-    else:
-        st.info("No hay registros en el historial diario para cerrar el día.")
-
 # Inicializar sesión de usuario
 usuario_actual = gestionar_usuario()
 
@@ -138,8 +130,6 @@ if usuario_actual:
         mostrar_resumen(usuario_actual)
     elif opcion == "Subir a Google Drive":
         subir_a_google_drive_usuario(usuario_actual)
-    elif opcion == "Cerrar Día":
-        cerrar_dia(usuario_actual)
 
 
 
