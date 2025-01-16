@@ -3,3 +3,4 @@ streamlit
 openpyxl
 pydrive2
 pydrive
+google_auth_oauthlib
