@@ -14,7 +14,7 @@ SCOPES = ['https://www.googleapis.com/auth/drive.file']
 @st.cache_data
 def load_food_data():
     """Carga el dataset de alimentos desde una URL."""
-    file_path = "https://github.com/JUANJOSEDH028/calorias/blob/main/LISTA%20DE%20INTERCAMBIO%20UDEA%20ORIGINAL%20-%20UdeA..xlsx"
+    file_path = "https://raw.githubusercontent.com/JUANJOSEDH028/appCalorias/main/alimentos_limpios.csv"
     return pd.read_csv(file_path)
 
 class NutritionTracker:
