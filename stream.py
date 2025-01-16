@@ -12,14 +12,8 @@ import json
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
 
 
-El error FileNotFoundError ocurre porque el archivo colombia.xlsx no está disponible en la ubicación especificada /mnt/data/colombia.xlsx. Esto puede solucionarse de las siguientes maneras:
 
-Corrección
-1. Cambia la Ruta al Archivo Correctamente
-En lugar de referenciar /mnt/data/colombia.xlsx, utiliza el archivo directamente desde la URL o la ruta válida que conoces. Para usarlo desde una URL, modifica la función load_food_data:
 
-python
-Copiar código
 @st.cache_data
 def load_food_data():
     """Carga el dataset desde la URL proporcionada."""
