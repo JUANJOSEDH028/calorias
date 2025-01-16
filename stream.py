@@ -13,9 +13,18 @@ SCOPES = ['https://www.googleapis.com/auth/drive.file']
 
 @st.cache_data
 def load_food_data():
-    """Carga el dataset de alimentos desde una URL."""
-    file_path = "https://raw.githubusercontent.com/JUANJOSEDH028/appCalorias/main/alimentos_limpios.csv"
-    return pd.read_csv(file_path)
+    """Carga el dataset desde el archivo proporcionado."""
+    file_path = '/mnt/data/colombia.xlsx'
+    data = pd.read_excel(file_path)
+    # Renombrar las columnas para que coincidan con el código existente
+    data.rename(columns={
+        "Alimento": "name",
+        "Calorias": "Calories",
+        "Grasas": "Fat (g)",
+        "Proteinas": "Protein (g)",
+        "Carbohidratos": "Carbohydrate (g)"
+    }, inplace=True)
+    return data
 
 class NutritionTracker:
     def __init__(self):
@@ -111,6 +120,53 @@ class NutritionTracker:
             st.error(f"Error al subir archivo: {str(e)}")
             return False
 
+    def register_food(self, usuario, alimento_nombre, cantidad):
+        """Registra un alimento consumido."""
+        try:
+            if self.data.empty:
+                st.error("No se han cargado los datos de alimentos")
+                return False
+
+            alimento = self.data[self.data["name"] == alimento_nombre].iloc[0]
+            valores = alimento[["Calories", "Fat (g)", "Protein (g)", "Carbohydrate (g)"]] * (cantidad / 100)
+
+            nuevo_registro = pd.DataFrame({
+                'Fecha y Hora': [datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
+                'Alimento': [alimento["name"]],
+                'Cantidad (g)': [cantidad],
+                'Calorías': [valores["Calories"]],
+                'Grasas (g)': [valores["Fat (g)"]],
+                'Proteínas (g)': [valores["Protein (g)"]],
+                'Carbohidratos (g)': [valores["Carbohydrate (g)"]]
+            })
+
+            if 'historial' not in st.session_state:
+                st.session_state.historial = nuevo_registro
+            else:
+                st.session_state.historial = pd.concat(
+                    [st.session_state.historial, nuevo_registro],
+                    ignore_index=True
+                )
+
+            filename = f"historial_consumo_{usuario}.csv"
+            return self.upload_to_drive(
+                usuario,
+                st.session_state.historial.to_csv(index=False),
+                filename
+            )
+
+        except Exception as e:
+            st.error(f"Error al registrar alimento: {str(e)}")
+            return False
+
+    def get_daily_summary(self):
+        """Obtiene el resumen diario de nutrición."""
+        if 'historial' in st.session_state and not st.session_state.historial.empty:
+            return st.session_state.historial[
+                ["Calorías", "Grasas (g)", "Proteínas (g)", "Carbohidratos (g)"]
+            ].sum()
+        return None
+
 def main():
     st.title("📊 Seguimiento Nutricional")
 
@@ -168,6 +224,32 @@ def main():
             if st.session_state.tracker.register_food(usuario, alimento, cantidad):
                 st.success("✅ Alimento registrado correctamente")
 
+    elif menu == "Resumen Diario":
+        st.header("📈 Resumen del Día")
+        resumen = st.session_state.tracker.get_daily_summary()
+
+        if resumen is not None:
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.metric(
+                    "Calorías",
+                    f"{resumen['Calorías']:.1f} kcal",
+                    f"{resumen['Calorías'] - calorias_meta:.1f} kcal"
+                )
+
+            with col2:
+                st.metric(
+                    "Proteínas",
+                    f"{resumen['Proteínas (g)']:.1f} g",
+                    f"{resumen['Proteínas (g)'] - proteinas_meta:.1f} g"
+                )
+
+            st.table(resumen)
+        else:
+            st.info("📝 No hay registros para hoy")
+
 if __name__ == "__main__":
     main()
+
 
