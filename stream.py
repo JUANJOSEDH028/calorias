@@ -11,9 +11,6 @@ import json
 # Configuración de constantes
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
 
-
-
-
 @st.cache_data
 def load_food_data():
     """Carga el dataset desde la URL proporcionada."""
@@ -21,11 +18,9 @@ def load_food_data():
     data = pd.read_excel(file_path)
     # Renombrar las columnas para que coincidan con el código existente
     data.rename(columns={
-        "Alimento": "name",
-        "Calorias": "Calories",
-        "Grasas": "Fat (g)",
-        "Proteinas": "Protein (g)",
-        "Carbohidratos": "Carbohydrate (g)"
+        "Gramos por Porción": "Grams per Portion",
+        "Calorías por Porción": "Calories",
+        "Proteína (g)": "Protein (g)"
     }, inplace=True)
     return data
 
@@ -130,17 +125,15 @@ class NutritionTracker:
                 st.error("No se han cargado los datos de alimentos")
                 return False
 
-            alimento = self.data[self.data["name"] == alimento_nombre].iloc[0]
-            valores = alimento[["Calories", "Fat (g)", "Protein (g)", "Carbohydrate (g)"]] * (cantidad / 100)
+            alimento = self.data[self.data["Grams per Portion"] == alimento_nombre].iloc[0]
+            valores = alimento[["Calories", "Protein (g)"]] * (cantidad / alimento["Grams per Portion"])
 
             nuevo_registro = pd.DataFrame({
                 'Fecha y Hora': [datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
-                'Alimento': [alimento["name"]],
+                'Alimento': [alimento_nombre],
                 'Cantidad (g)': [cantidad],
                 'Calorías': [valores["Calories"]],
-                'Grasas (g)': [valores["Fat (g)"]],
-                'Proteínas (g)': [valores["Protein (g)"]],
-                'Carbohidratos (g)': [valores["Carbohydrate (g)"]]
+                'Proteínas (g)': [valores["Protein (g)"]]
             })
 
             if 'historial' not in st.session_state:
@@ -166,7 +159,7 @@ class NutritionTracker:
         """Obtiene el resumen diario de nutrición."""
         if 'historial' in st.session_state and not st.session_state.historial.empty:
             return st.session_state.historial[
-                ["Calorías", "Grasas (g)", "Proteínas (g)", "Carbohidratos (g)"]
+                ["Calorías", "Proteínas (g)"]
             ].sum()
         return None
 
@@ -218,7 +211,7 @@ def main():
         with col1:
             alimento = st.selectbox(
                 "Alimento:",
-                st.session_state.tracker.data["name"] if not st.session_state.tracker.data.empty else []
+                st.session_state.tracker.data["Grams per Portion"] if not st.session_state.tracker.data.empty else []
             )
         with col2:
             cantidad = st.number_input("Cantidad (g):", min_value=1.0, step=1.0)
@@ -254,5 +247,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
