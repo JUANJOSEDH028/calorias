@@ -11,7 +11,7 @@ import tempfile
 file_path = "alimentos_limpios.xlsx"
 data = pd.read_excel(file_path)
 
-# Autenticación con Google Drive usando PyDrive2
+# Autenticación con Google Drive usando flujo manual
 def autenticar_google_drive(usuario):
     credenciales_usuario = f"mycreds_{usuario}.txt"
 
@@ -35,10 +35,16 @@ def autenticar_google_drive(usuario):
         gauth.LoadClientConfigFile(client_secrets_path)
 
         if not os.path.exists(credenciales_usuario):
-            st.info("Abriendo navegador para autenticación...")
-            gauth.LocalWebserverAuth()  # Abre el navegador para autenticación
-            gauth.SaveCredentialsFile(credenciales_usuario)
-            st.success("Autenticación completada y credenciales guardadas.")
+            st.info("Autenticación manual requerida. Sigue los pasos:")
+            auth_url = gauth.GetAuthUrl()  # Generar URL de autenticación
+            st.write(f"[Haz clic aquí para autenticarte]({auth_url})")
+
+            # Capturar el código de autenticación
+            auth_code = st.text_input("Introduce el código de autenticación aquí:")
+            if st.button("Enviar Código"):
+                gauth.Auth(auth_code)  # Autenticar usando el código
+                gauth.SaveCredentialsFile(credenciales_usuario)
+                st.success("Autenticación completada y credenciales guardadas.")
         else:
             gauth.LoadCredentialsFile(credenciales_usuario)
             if gauth.access_token_expired:
@@ -76,4 +82,3 @@ def probar_google_drive(usuario):
 usuario_actual = st.sidebar.text_input("Introduce tu correo electrónico:")
 if st.sidebar.button("Probar Google Drive"):
     probar_google_drive(usuario_actual)
-
