@@ -171,7 +171,7 @@ class NutritionTracker:
                 st.error("No se han cargado los datos de alimentos")
                 return False
 
-            alimento = self.data[self.data["Grams per Portion"] == alimento_nombre].iloc[0]
+            alimento = self.data[self.data["Alimento"] == alimento_nombre].iloc[0]
             valores = alimento[["Calories", "Protein (g)"]] * (cantidad / alimento["Grams per Portion"])
 
             nuevo_registro = pd.DataFrame({
