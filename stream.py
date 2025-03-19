@@ -14,25 +14,47 @@ SCOPES = ['https://www.googleapis.com/auth/drive.file']
 
 @st.cache_data
 def load_food_data():
+    """Carga y limpia el dataset de alimentos."""
     file_path = "https://github.com/JUANJOSEDH028/calorias/raw/main/colombia.csv"
+    
+    # 1. Lee el CSV con la codificación y separador adecuados
+    #    Se indica 'decimal=','' para interpretar comas como separador decimal.
     data = pd.read_csv(
         file_path,
         sep=';',
         encoding='latin-1',
-        decimal=','  # Indica que use comas para decimales
+        decimal=','
     )
     
-    # Renombrar columnas
+    # 2. Renombra las columnas según los nombres reales del CSV
     data.rename(columns={
         "Gramos por Porción": "Grams per Portion",
         "Calorías por Porción": "Calories",
         "Proteína (g)": "Protein (g)"
     }, inplace=True)
     
-    # Rellenar NaN
-    data['Protein (g)'] = data['Protein (g)'].fillna(0)
+    # 3. Forzar la conversión de las columnas numéricas a float,
+    #    reemplazando manualmente comas si todavía existieran
+    data["Grams per Portion"] = pd.to_numeric(
+        data["Grams per Portion"].astype(str).str.replace(",", "."),
+        errors='coerce'
+    )
+    data["Calories"] = pd.to_numeric(
+        data["Calories"].astype(str).str.replace(",", "."),
+        errors='coerce'
+    )
+    data["Protein (g)"] = pd.to_numeric(
+        data["Protein (g)"].astype(str).str.replace(",", "."),
+        errors='coerce'
+    )
+    
+    # 4. Rellenar valores NaN con 0
+    data["Grams per Portion"] = data["Grams per Portion"].fillna(0)
+    data["Calories"] = data["Calories"].fillna(0)
+    data["Protein (g)"] = data["Protein (g)"].fillna(0)
     
     return data
+
 class NutritionTracker:
     def __init__(self):
         """Inicializa el tracker con los datos de alimentos."""
@@ -176,7 +198,10 @@ class NutritionTracker:
                 st.error("No se han cargado los datos de alimentos")
                 return False
 
+            # localiza la fila que coincide con el alimento seleccionado
             alimento = self.data[self.data["Alimento"] == alimento_nombre].iloc[0]
+
+            # calcula la proporción (cantidad / Grams per Portion) para escalar Calories y Protein
             valores = alimento[["Calories", "Protein (g)"]] * (cantidad / alimento["Grams per Portion"])
 
             nuevo_registro = pd.DataFrame({
