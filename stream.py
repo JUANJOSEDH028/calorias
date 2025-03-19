@@ -14,22 +14,25 @@ SCOPES = ['https://www.googleapis.com/auth/drive.file']
 
 @st.cache_data
 def load_food_data():
-    """Carga y limpia el dataset de alimentos."""
     file_path = "https://github.com/JUANJOSEDH028/calorias/raw/main/colombia.csv"
-    # Se especifica la codificación para evitar errores con caracteres especiales
-    data = pd.read_csv(file_path, sep=';', encoding='latin-1')
+    data = pd.read_csv(
+        file_path,
+        sep=';',
+        encoding='latin-1',
+        decimal=','  # Indica que use comas para decimales
+    )
     
-    # Renombrar columnas usando los nombres correctos del CSV
+    # Renombrar columnas
     data.rename(columns={
         "Gramos por Porción": "Grams per Portion",
         "Calorías por Porción": "Calories",
         "Proteína (g)": "Protein (g)"
     }, inplace=True)
     
-    # Manejar valores faltantes
+    # Rellenar NaN
     data['Protein (g)'] = data['Protein (g)'].fillna(0)
+    
     return data
-
 class NutritionTracker:
     def __init__(self):
         """Inicializa el tracker con los datos de alimentos."""
