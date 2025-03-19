@@ -15,14 +15,14 @@ SCOPES = ['https://www.googleapis.com/auth/drive.file']
 @st.cache_data
 def load_food_data():
     """Carga y limpia el dataset de alimentos."""
-    file_path = "https://github.com/JUANJOSEDH028/calorias/raw/main/colombia.xlsx"
-    data = pd.read_excel(file_path)
+    file_path = "https://github.com/JUANJOSEDH028/calorias/raw/main/colombia.csv"
+    data = pd.read_csv(file_path, sep=';')
     
     # Renombrar y limpiar datos
     data.rename(columns={
-        "Gramos por Porción": "Grams per Portion",
-        "Calorías por Porción": "Calories",
-        "Proteína (g)": "Protein (g)"
+        "Gramos por Porciуn": "Grams per Portion",
+        "Calorнas por Porciуn": "Calories",
+        "Proteнna (g)": "Protein (g)"
     }, inplace=True)
     
     # Manejar valores faltantes
@@ -226,6 +226,13 @@ class NutritionTracker:
 
 def main():
     st.title("📊 Seguimiento Nutricional Avanzado")
+    
+    # Aumentar la duración de la sesión - Configuración previa al inicio
+    if not st.session_state.get('_is_session_initialized', False):
+        # Configura el tiempo de expiración de la sesión (en segundos)
+        # 24 horas = 86400 segundos
+        st.session_state['_session_expiry'] = 86400
+        st.session_state['_is_session_initialized'] = True
 
     if 'tracker' not in st.session_state:
         st.session_state.tracker = NutritionTracker()
@@ -240,6 +247,32 @@ def main():
     if not usuario:
         st.warning("⚠️ Por favor, ingresa tu email para comenzar.")
         return
+
+    # Cargar historial previo al inicio de la aplicación
+    if usuario and 'historial' not in st.session_state:
+        try:
+            service = st.session_state.tracker.get_drive_service(usuario)
+            if service:
+                filename = f"historial_consumo_{usuario}.csv"
+                results = service.files().list(
+                    q=f"name='{filename}' and trashed=false",
+                    fields="files(id)"
+                ).execute()
+                
+                if results.get('files', []):
+                    file_id = results['files'][0]['id']
+                    request = service.files().get_media(fileId=file_id)
+                    file_content = request.execute().decode('utf-8')
+                    
+                    # Guardar en un archivo temporal para leerlo con pandas
+                    with open('temp_historial.csv', 'w') as f:
+                        f.write(file_content)
+                    
+                    st.session_state.historial = pd.read_csv('temp_historial.csv')
+                    os.remove('temp_historial.csv')
+        except Exception as e:
+            st.error(f"Error al cargar historial previo: {str(e)}")
+            st.session_state.historial = pd.DataFrame()
 
     # Cargar o crear perfil
     if 'user_profile' not in st.session_state:
@@ -305,9 +338,10 @@ def main():
 
         col1, col2 = st.columns(2)
         with col1:
+            # CORRECCIÓN: Usar la columna "Alimento" en lugar de "Grams per Portion"
             alimento = st.selectbox(
                 "Alimento:",
-                st.session_state.tracker.data["Grams per Portion"] if not st.session_state.tracker.data.empty else []
+                st.session_state.tracker.data["Alimento"].tolist() if not st.session_state.tracker.data.empty else []
             )
         with col2:
             cantidad = st.number_input("Cantidad (g):", min_value=1.0, step=1.0)
