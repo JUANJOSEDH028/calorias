@@ -16,13 +16,14 @@ SCOPES = ['https://www.googleapis.com/auth/drive.file']
 def load_food_data():
     """Carga y limpia el dataset de alimentos."""
     file_path = "https://github.com/JUANJOSEDH028/calorias/raw/main/colombia.csv"
+    # Se especifica la codificación para evitar errores con caracteres especiales
     data = pd.read_csv(file_path, sep=';', encoding='latin-1')
     
-    # Renombrar y limpiar datos
+    # Renombrar columnas usando los nombres correctos del CSV
     data.rename(columns={
-        "Gramos por Porciуn": "Grams per Portion",
-        "Calorнas por Porciуn": "Calories",
-        "Proteнna (g)": "Protein (g)"
+        "Gramos por Porción": "Grams per Portion",
+        "Calorías por Porción": "Calories",
+        "Proteína (g)": "Protein (g)"
     }, inplace=True)
     
     # Manejar valores faltantes
@@ -92,7 +93,7 @@ class NutritionTracker:
             if not service:
                 return False
 
-            with open(filename, 'w') as f:
+            with open(filename, 'w', encoding='latin-1') as f:
                 f.write(content)
 
             file_metadata = {'name': filename}
@@ -156,7 +157,8 @@ class NutritionTracker:
             if results.get('files', []):
                 file_id = results['files'][0]['id']
                 request = service.files().get_media(fileId=file_id)
-                file_content = request.execute().decode('utf-8')
+                # Se cambia la decodificación a latin-1 para interpretar correctamente caracteres especiales
+                file_content = request.execute().decode('latin-1')
                 return json.loads(file_content)
                 
             return None
@@ -262,10 +264,11 @@ def main():
                 if results.get('files', []):
                     file_id = results['files'][0]['id']
                     request = service.files().get_media(fileId=file_id)
-                    file_content = request.execute().decode('utf-8')
+                    # Se cambia la decodificación a latin-1 para evitar errores
+                    file_content = request.execute().decode('latin-1')
                     
                     # Guardar en un archivo temporal para leerlo con pandas
-                    with open('temp_historial.csv', 'w') as f:
+                    with open('temp_historial.csv', 'w', encoding='latin-1') as f:
                         f.write(file_content)
                     
                     st.session_state.historial = pd.read_csv('temp_historial.csv')
@@ -338,7 +341,6 @@ def main():
 
         col1, col2 = st.columns(2)
         with col1:
-            # CORRECCIÓN: Usar la columna "Alimento" en lugar de "Grams per Portion"
             alimento = st.selectbox(
                 "Alimento:",
                 st.session_state.tracker.data["Alimento"].tolist() if not st.session_state.tracker.data.empty else []
