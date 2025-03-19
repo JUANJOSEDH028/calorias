@@ -16,7 +16,7 @@ SCOPES = ['https://www.googleapis.com/auth/drive.file']
 def load_food_data():
     """Carga y limpia el dataset de alimentos."""
     file_path = "https://github.com/JUANJOSEDH028/calorias/raw/main/colombia.csv"
-    data = pd.read_csv(file_path, sep=';')
+    data = pd.read_csv(file_path, sep=';', encoding='latin-1')
     
     # Renombrar y limpiar datos
     data.rename(columns={
